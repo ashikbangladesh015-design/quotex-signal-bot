@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quotex Signal Bot</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1020;color:#eef2ff;font-family:Arial,sans-serif;padding:18px}
+.app{max-width:520px;margin:auto}
+h1{font-size:25px;color:#58e6b5}
+.card{background:#151e32;border:1px solid #2a3954;border-radius:14px;padding:16px;margin:14px 0}
+label{display:block;margin:12px 0 6px;color:#b8c5dc}
+select,button{width:100%;padding:13px;border-radius:9px;font-size:15px}
+select{background:#0b1020;color:white;border:1px solid #40516c}
+button{background:#36d6a0;color:#071b17;font-weight:bold;border:0;margin-top:14px}
+.result{font-size:22px;font-weight:bold;text-align:center;padding:16px}
+.small{font-size:13px;color:#aab8d0;line-height:1.6}
+.status{color:#ffca70}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>⚡ Quotex Signal Bot</h1>
+<p class="small">Technical analysis dashboard</p>
+
+<div class="card">
+<label>Market Type</label>
+<select id="market">
+<option value="real">Real Market</option>
+<option value="otc">OTC Market</option>
+</select>
+
+<label>Trading Pair</label>
+<select id="pair">
+<option>EUR/USD</option>
+<option>GBP/USD</option>
+<option>USD/JPY</option>
+<option>AUD/USD</option>
+<option>USD/BDT</option>
+</select>
+
+<label>Timeframe</label>
+<select id="tf">
+<option value="1m">1 Minute</option>
+<option value="5m">5 Minutes</option>
+<option value="15m">15 Minutes</option>
+</select>
+
+<button id="analyze">ANALYZE MARKET</button>
+</div>
+
+<div class="card">
+<div class="result" id="signal">WAIT</div>
+<p id="message" class="small">
+Live market data API is not connected.
+</p>
+<p class="small">EMA • RSI • MACD • Bollinger Bands</p>
+<p class="small">Stochastic • ADX • Support/Resistance</p>
+<p class="small">Candlestick patterns • ATR</p>
+</div>
+
+<div class="card">
+<h3>Connection Status</h3>
+<p id="connection" class="status">
+Backend not connected
+</p>
+<p class="small">
+This dashboard does not generate verified live signals
+until a working data API and analysis backend are configured.
+OTC data requires a compatible, authorized source.
+</p>
+</div>
+</div>
+
+<script>
+document.getElementById("analyze").onclick=async function(){
+ const btn=this;
+ const signal=document.getElementById("signal");
+ const message=document.getElementById("message");
+ const connection=document.getElementById("connection");
+
+ btn.disabled=true;
+ btn.textContent="CONNECTING...";
+ signal.textContent="WAIT";
+ message.textContent="Requesting market analysis...";
+ connection.textContent="Checking backend...";
+
+ try{
+  const response=await fetch(
+   "/.netlify/functions/signal",
+   {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+     market:document.getElementById("market").value,
+     pair:document.getElementById("pair").value,
+     timeframe:document.getElementById("tf").value
+    })
+   }
+  );
+
+  if(!response.ok) throw new Error("Backend unavailable");
+
+  const data=await response.json();
+  if(!["BUY","SELL","WAIT"].includes(data.signal))
+   throw new Error("Invalid signal response");
+
+  signal.textContent=data.signal;
+  message.textContent=data.message ||
+   "Analysis received. Signals are not guaranteed.";
+  connection.textContent="Backend connected";
+ }catch(error){
+  signal.textContent="WAIT";
+  message.textContent=
+   "No verified signal. Configure the live-data API and backend first.";
+  connection.textContent=
+   "Backend or market-data API not connected";
+ }finally{
+  btn.disabled=false;
+  btn.textContent="ANALYZE MARKET";
+ }
+};
+</script>
+</body>
+</html>
